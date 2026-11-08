@@ -329,7 +329,7 @@ func TestStartErrors(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	m := make(map[int]struct{})
+	var s []int
 	var g G
 	for n := 1; n <= 6; n++ {
 		g.RootTask(func(g *G) error {
@@ -339,10 +339,13 @@ func TestStop(t *testing.T) {
 				return nil
 			}
 			nn = n
+			s = append(s, nn)
 			g.Cleanup(func() {
-				m[nn] = struct{}{}
+				i := len(s) - 1
+				require.Equal(t, nn, s[i])
+				s = s[:i]
 				if nn >= 2 && nn <= 5 {
-					panic("boom")
+					panic(fmt.Sprintf("boom %v", nn))
 				}
 			})
 			return g.Context().Err()
@@ -350,10 +353,11 @@ func TestStop(t *testing.T) {
 	}
 	err := g.Start(t.Context())
 	require.NoError(t, err)
-	assert.PanicsWithValue(t, "boom", func() {
+	assert.Len(t, s, 6)
+	assert.PanicsWithValue(t, "boom 5", func() {
 		g.Stop()
 	})
-	assert.Len(t, m, 6)
+	assert.Len(t, s, 0)
 }
 
 func TestContext(t *testing.T) {
