@@ -11,8 +11,6 @@ import (
 	"runtime"
 )
 
-const locationFormat = "%s:%d"
-
 // G holds a task graph and its startup state. It is not safe for concurrent use.
 type G struct {
 	tasks         []task
@@ -35,14 +33,6 @@ type task struct {
 	PendingErr error
 	Color      color
 }
-
-type color int
-
-const (
-	white color = 0
-	gray  color = 1
-	black color = 2
-)
 
 func (n *task) SetPendingErr(err error) {
 	if n.PendingErr == nil {
@@ -71,6 +61,14 @@ type provision struct {
 	Task       *task
 	Decorators []*task
 }
+
+type color int
+
+const (
+	white color = 0
+	gray  color = 1
+	black color = 2
+)
 
 type key struct {
 	ValueType reflect.Type
@@ -109,10 +107,10 @@ func (g *G) task(taskFunc func(*G) error, isRoot bool, methodName string) {
 	}
 
 	g.isDeclaring = true
-	ok := false
+	success := false
 	defer func(l int) {
 		g.isDeclaring = false
-		if !ok {
+		if !success {
 			clear(g.tasks[l:])
 			g.tasks = g.tasks[:l]
 		}
@@ -121,7 +119,7 @@ func (g *G) task(taskFunc func(*G) error, isRoot bool, methodName string) {
 	_, filePath, lineNumber, _ := runtime.Caller(2)
 
 	g.tasks = append(g.tasks, task{
-		Location: fmt.Sprintf(locationFormat, filePath, lineNumber),
+		Location: makeLocation(filePath, lineNumber),
 		IsRoot:   isRoot,
 		Func:     taskFunc,
 	})
@@ -135,7 +133,7 @@ func (g *G) task(taskFunc func(*G) error, isRoot bool, methodName string) {
 		panic("gad: taskFunc should never return error during declaration, got: " + err.Error())
 	}
 
-	ok = true
+	success = true
 }
 
 // Require declares a dependency on a value, identified by its type and
@@ -190,7 +188,7 @@ func (g *G) requireOrDecorate[T any](valueName string, isDecoration, isOptional 
 
 		task := &g.tasks[len(g.tasks)-1]
 		task.Requirements = append(task.Requirements, requirement{
-			Location:     fmt.Sprintf(locationFormat, filePath, lineNumber),
+			Location:     makeLocation(filePath, lineNumber),
 			IsDecoration: isDecoration,
 			IsOptional:   isOptional,
 			ValueName:    valueName,
@@ -231,7 +229,7 @@ func (g *G) Provide[T any](valuePtr *T, valueName string) {
 
 		task := &g.tasks[len(g.tasks)-1]
 		task.Provisions = append(task.Provisions, provision{
-			Location:  fmt.Sprintf(locationFormat, filePath, lineNumber),
+			Location:  makeLocation(filePath, lineNumber),
 			ValueName: valueName,
 			ValueType: reflect.TypeFor[T](),
 		})
@@ -309,12 +307,12 @@ func (g *G) Start(ctx context.Context) error {
 	g.context = ctx
 	g.valueRegistry = map[key]any{}
 	g.cleanups = []func(){}
-	ok := false
+	success := false
 	defer func() {
 		g.isStarting = false
 		g.context = nil
 		g.valueRegistry = nil
-		if !ok {
+		if !success {
 			g.stop()
 		}
 	}()
@@ -325,7 +323,8 @@ func (g *G) Start(ctx context.Context) error {
 			return fmt.Errorf("%w; location=%q: %w", ErrTaskFailed, task.Location, err)
 		}
 	}
-	ok = true
+
+	success = true
 	return nil
 }
 
@@ -559,17 +558,6 @@ func (g *G) stop() {
 	}
 }
 
-func doIgnoringPanic(f func()) {
-	ok := false
-	defer func() {
-		if !ok {
-			recover()
-		}
-	}()
-	f()
-	ok = true
-}
-
 // Context returns the context passed to Start. It must be called during
 // startup, after Ready.
 func (g *G) Context() context.Context {
@@ -581,4 +569,19 @@ func (g *G) Context() context.Context {
 	}
 
 	return g.context
+}
+
+func makeLocation(filePath string, lineNumber int) string {
+	return fmt.Sprintf("%s:%d", filePath, lineNumber)
+}
+
+func doIgnoringPanic(f func()) {
+	hasPanic := true
+	defer func() {
+		if hasPanic {
+			recover()
+		}
+	}()
+	f()
+	hasPanic = false
 }
