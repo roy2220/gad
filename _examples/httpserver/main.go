@@ -77,13 +77,13 @@ func (*EchoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // RegisterEchoHandler registers the /echo route on the ServeMux.
 func RegisterEchoHandler(g *gad.G) {
 	g.Task(func(g *gad.G) error {
-		mux := g.Decorate[*http.ServeMux]("")
+		muxPtr := g.Decorate[*http.ServeMux]("")
 
 		if !g.Ready() {
 			return nil
 		}
 
-		(*mux).Handle("/echo", &EchoHandler{})
+		(*muxPtr).Handle("/echo", &EchoHandler{})
 		return nil
 	})
 }
@@ -104,4 +104,5 @@ func main() {
 
 	// Keep the main goroutine alive until a SIGINT or SIGTERM is received.
 	<-ctx.Done()
+	fmt.Println("Received shutdown signal")
 }

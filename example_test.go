@@ -14,9 +14,9 @@ type HotDog struct {
 type Sausage struct{ Flavor string }
 type Bun struct{ Size string }
 
-func NewHotDog(s *Sausage, b *Bun) *HotDog { return &HotDog{Sausage: s, Bun: b} }
-func (h *HotDog) String() string           { return h.Sausage.Flavor + " sausage in a " + h.Bun.Size + " bun" }
-func (h *HotDog) Close()                   { fmt.Println("recycle hot dog") }
+func NewHotDog(sausage *Sausage, bun *Bun) *HotDog { return &HotDog{Sausage: sausage, Bun: bun} }
+func (h *HotDog) String() string                   { return h.Sausage.Flavor + " sausage in a " + h.Bun.Size + " bun" }
+func (h *HotDog) Close()                           { fmt.Println("recycle hot dog") }
 
 func NewSausage(flavor string) *Sausage { return &Sausage{Flavor: flavor} }
 func (s *Sausage) Close()               { fmt.Println("recycle sausage") }
@@ -29,68 +29,68 @@ func ExampleG() {
 
 	// The root task is declared first on purpose: declaration order doesn't matter.
 	g.RootTask(func(g *gad.G) error {
-		h := g.Require[*HotDog]("")
+		hotDog := g.Require[*HotDog]("")
 
 		if !g.Ready() {
 			return nil
 		}
 
-		fmt.Println("got hot dog: " + h.String())
+		fmt.Println("got hot dog: " + hotDog.String())
 		return nil
 	})
 
 	g.Task(func(g *gad.G) error {
-		s := g.Require[*Sausage]("")
-		b := g.Require[*Bun]("")
+		sausage := g.Require[*Sausage]("")
+		bun := g.Require[*Bun]("")
 
-		var h *HotDog
-		g.Provide(&h, "")
+		var hotDog *HotDog
+		g.Provide(&hotDog, "")
 
 		if !g.Ready() {
 			return nil
 		}
 
-		h = NewHotDog(s, b)
-		g.Cleanup(h.Close)
+		hotDog = NewHotDog(sausage, bun)
+		g.Cleanup(hotDog.Close)
 		return nil
 	})
 
 	g.Task(func(g *gad.G) error {
-		var s *Sausage
-		g.Provide(&s, "")
+		var sausage *Sausage
+		g.Provide(&sausage, "")
 
 		if !g.Ready() {
 			return nil
 		}
 
-		s = NewSausage("spicy")
-		g.Cleanup(s.Close)
+		sausage = NewSausage("spicy")
+		g.Cleanup(sausage.Close)
 		return nil
 	})
 
 	g.Task(func(g *gad.G) error {
-		var b *Bun
-		g.Provide(&b, "")
+		var bun *Bun
+		g.Provide(&bun, "")
 
 		if !g.Ready() {
 			return nil
 		}
 
-		b = NewBun("large")
-		g.Cleanup(b.Close)
+		bun = NewBun("large")
+		g.Cleanup(bun.Close)
 		return nil
 	})
 
 	g.Task(func(g *gad.G) error {
-		s := g.Decorate[*Sausage]("")
-		b := g.Decorate[*Bun]("")
+		sausagePtr := g.Decorate[*Sausage]("")
+		bunPtr := g.Decorate[*Bun]("")
 
 		if !g.Ready() {
 			return nil
 		}
 
-		(*s).Flavor = "super-" + (*s).Flavor // partial modification
-		*b = &Bun{Size: "small"}             // complete rewrite
+		(*sausagePtr).Flavor = "super-" + (*sausagePtr).Flavor // partial modification
+		*bunPtr = &Bun{Size: "small"}                          // complete rewrite
 		return nil
 	})
 

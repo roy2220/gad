@@ -717,54 +717,54 @@ func (o *RequireOp) ExecuteAfterReady(g *G) string {
 }
 
 type TryRequireOp struct {
-	Target string
-	Result *string
+	Target    string
+	ResultPtr *string
 }
 
 func (o *TryRequireOp) ExecuteBeforeReady(g *G) {
-	o.Result = g.TryRequire[string](o.Target)
+	o.ResultPtr = g.TryRequire[string](o.Target)
 }
 
 func (o *TryRequireOp) ExecuteAfterReady(g *G) string {
-	if o.Result == nil {
+	if o.ResultPtr == nil {
 		return "nil"
 	} else {
-		return *o.Result
+		return *o.ResultPtr
 	}
 }
 
 type DecorateOp struct {
-	TaskName string
-	Target   string
-	Result   *string
+	TaskName  string
+	Target    string
+	ResultPtr *string
 }
 
 func (o *DecorateOp) ExecuteBeforeReady(g *G) {
-	o.Result = g.Decorate[string](o.Target)
+	o.ResultPtr = g.Decorate[string](o.Target)
 }
 
 func (o *DecorateOp) ExecuteAfterReady(g *G) string {
-	r := *o.Result
-	*o.Result = fmt.Sprintf("(%s,%s)", r, o.TaskName)
+	r := *o.ResultPtr
+	*o.ResultPtr = fmt.Sprintf("(%s,%s)", r, o.TaskName)
 	return fmt.Sprintf("%s; %s=>(%s,%s)", r, r, r, o.TaskName)
 }
 
 type TryDecorateOp struct {
-	TaskName string
-	Target   string
-	Result   *string
+	TaskName  string
+	Target    string
+	ResultPtr *string
 }
 
 func (o *TryDecorateOp) ExecuteBeforeReady(g *G) {
-	o.Result = g.TryDecorate[string](o.Target)
+	o.ResultPtr = g.TryDecorate[string](o.Target)
 }
 
 func (o *TryDecorateOp) ExecuteAfterReady(g *G) string {
-	if o.Result == nil {
+	if o.ResultPtr == nil {
 		return "nil"
 	} else {
-		r := *o.Result
-		*o.Result = fmt.Sprintf("(%s,%s)", r, o.TaskName)
+		r := *o.ResultPtr
+		*o.ResultPtr = fmt.Sprintf("(%s,%s)", r, o.TaskName)
 		return fmt.Sprintf("%s; %s=>(%s,%s)", r, r, r, o.TaskName)
 	}
 }
